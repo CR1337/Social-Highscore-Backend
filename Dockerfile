@@ -5,6 +5,8 @@ WORKDIR /usr/src/api
 #Server will reload itself on file changes if in dev mode
 #ENV FLASK_ENV=development 
 COPY requirements.txt requirements.txt
+RUN apt-get update
+RUN apt-get install ffmpeg libsm6 libxext6 -y
 RUN pip install -r requirements.txt
 COPY . .
 CMD ["python3", "api.py"]
