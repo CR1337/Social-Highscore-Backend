@@ -60,9 +60,9 @@ def analyze():
 
 	if tf_version == 1:
 		with graph.as_default():
-			resp_obj = analyzeWrapper(req, trx_id)
+			resp_obj, return_code = analyzeWrapper(req, trx_id)
 	elif tf_version == 2:
-		resp_obj = analyzeWrapper(req, trx_id)
+		resp_obj, return_code = analyzeWrapper(req, trx_id)
 
 	#---------------------------
 
@@ -71,7 +71,7 @@ def analyze():
 	resp_obj["trx_id"] = trx_id
 	resp_obj["seconds"] = toc-tic
 
-	return resp_obj, 200
+	return resp_obj, return_code
 
 def analyzeWrapper(req, trx_id = 0):
 	resp_obj = jsonify({'success': False})
@@ -101,16 +101,30 @@ def analyzeWrapper(req, trx_id = 0):
 		detector_backend = req["detector_backend"]
 
 	#---------------------------
+	resp_obj = {}
+	any_success = False
+	for idx, instance in enumerate(instances):
+		try:
+			resp_part = DeepFace.analyze(instance, actions = actions)
+			any_success = True
+		except Exception as err:
+			print("Exception: ", str(err))
+			resp_part = jsonify({'error': str(err)})
+		finally:
+			resp_obj[f"instance_{idx}"] = resp_part
+	return resp_obj, (200 if any_success else 205)
+		
 
-	try:
-		resp_obj = DeepFace.analyze(instances, actions = actions)
-	except Exception as err:
-		print("Exception: ", str(err))
-		return jsonify({'success': False, 'error': str(err)}), 205
 
-	#---------------
-	#print(resp_obj)
-	return resp_obj
+	# try:
+	# 	resp_obj = DeepFace.analyze(instances, actions = actions)
+	# except Exception as err:
+	# 	print("Exception: ", str(err))
+	# 	return jsonify({'success': False, 'error': str(err)}), 205
+
+	# #---------------
+	# #print(resp_obj)
+	# return resp_obj, 200
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -125,9 +139,9 @@ def verify():
 
 	if tf_version == 1:
 		with graph.as_default():
-			resp_obj = verifyWrapper(req, trx_id)
+			resp_obj, return_code = verifyWrapper(req, trx_id)
 	elif tf_version == 2:
-		resp_obj = verifyWrapper(req, trx_id)
+		resp_obj, return_code = verifyWrapper(req, trx_id)
 
 	#--------------------------
 
@@ -136,7 +150,7 @@ def verify():
 	resp_obj["trx_id"] = trx_id
 	resp_obj["seconds"] = toc-tic
 
-	return resp_obj, 200
+	return resp_obj, return_code
 
 def verifyWrapper(req, trx_id = 0):
 
@@ -188,7 +202,7 @@ def verifyWrapper(req, trx_id = 0):
 			, model_name = model_name
 			, distance_metric = distance_metric
 			, detector_backend = detector_backend
-		)
+		), 200
 
 		if model_name == "Ensemble": #issue 198.
 			for key in resp_obj: #issue 198.
@@ -199,93 +213,86 @@ def verifyWrapper(req, trx_id = 0):
 
 	return resp_obj
 
-@app.route('/represent', methods=['POST'])
-def represent():
+# @app.route('/represent', methods=['POST'])
+# def represent():
 
-	global graph
+# 	global graph
 
-	tic = time.time()
-	req = request.get_json()
-	trx_id = uuid.uuid4()
+# 	tic = time.time()
+# 	req = request.get_json()
+# 	trx_id = uuid.uuid4()
 
-	resp_obj = jsonify({'success': False})
+# 	resp_obj = jsonify({'success': False})
 
-	if tf_version == 1:
-		with graph.as_default():
-			resp_obj = representWrapper(req, trx_id)
-	elif tf_version == 2:
-		resp_obj = representWrapper(req, trx_id)
+# 	if tf_version == 1:
+# 		with graph.as_default():
+# 			resp_obj = representWrapper(req, trx_id)
+# 	elif tf_version == 2:
+# 		resp_obj = representWrapper(req, trx_id)
 
-	#--------------------------
+# 	#--------------------------
 
-	toc =  time.time()
+# 	toc =  time.time()
 
-	resp_obj["trx_id"] = trx_id
-	resp_obj["seconds"] = toc-tic
+# 	resp_obj["trx_id"] = trx_id
+# 	resp_obj["seconds"] = toc-tic
 
-	return resp_obj, 200
+# 	return resp_obj, 200
 
-def representWrapper(req, trx_id = 0):
+# def representWrapper(req, trx_id = 0):
 
-	resp_obj = jsonify({'success': False})
+# 	resp_obj = jsonify({'success': False})
 
-	#-------------------------------------
-	#find out model
+# 	#-------------------------------------
+# 	#find out model
 
-	model_name = "VGG-Face"; distance_metric = "cosine"; detector_backend = 'opencv'
+# 	model_name = "VGG-Face"; distance_metric = "cosine"; detector_backend = 'opencv'
 
-	if "model_name" in list(req.keys()):
-		model_name = req["model_name"]
+# 	if "model_name" in list(req.keys()):
+# 		model_name = req["model_name"]
 
-	if "detector_backend" in list(req.keys()):
-		detector_backend = req["detector_backend"]
+# 	if "detector_backend" in list(req.keys()):
+# 		detector_backend = req["detector_backend"]
 
-	#-------------------------------------
-	#retrieve images from request
+# 	#-------------------------------------
+# 	#retrieve images from request
 
-	img = ""
-	if "img" in list(req.keys()):
-		img = req["img"] #list
-		#print("img: ", img)
+# 	img = ""
+# 	if "img" in list(req.keys()):
+# 		img = req["img"] #list
+# 		#print("img: ", img)
 
-	validate_img = False
-	if len(img) > 11 and img[0:11] == "data:image/":
-		validate_img = True
+# 	validate_img = False
+# 	if len(img) > 11 and img[0:11] == "data:image/":
+# 		validate_img = True
 
-	if validate_img != True:
-		print("invalid image passed!")
-		return jsonify({'success': False, 'error': 'you must pass img as base64 encoded string'}), 205
+# 	if validate_img != True:
+# 		print("invalid image passed!")
+# 		return jsonify({'success': False, 'error': 'you must pass img as base64 encoded string'}), 205
 
-	#-------------------------------------
-	#call represent function from the interface
+# 	#-------------------------------------
+# 	#call represent function from the interface
 
-	try:
+# 	try:
 
-		embedding = DeepFace.represent(img
-			, model_name = model_name
-			, detector_backend = detector_backend
-		)
+# 		embedding = DeepFace.represent(img
+# 			, model_name = model_name
+# 			, detector_backend = detector_backend
+# 		)
 
-	except Exception as err:
-		print("Exception: ",str(err))
-		resp_obj = jsonify({'success': False, 'error': str(err)}), 205
+# 	except Exception as err:
+# 		print("Exception: ",str(err))
+# 		resp_obj = jsonify({'success': False, 'error': str(err)}), 205
 
-	#-------------------------------------
+# 	#-------------------------------------
 
-	#print("embedding is ", len(embedding)," dimensional vector")
-	resp_obj = {}
-	resp_obj["embedding"] = embedding
+# 	#print("embedding is ", len(embedding)," dimensional vector")
+# 	resp_obj = {}
+# 	resp_obj["embedding"] = embedding
 
-	#-------------------------------------
+# 	#-------------------------------------
 
-	return resp_obj
+# 	return resp_obj
 
 if __name__ == '__main__':
-	# parser = argparse.ArgumentParser()
-	# parser.add_argument(
-	# 	'-p', '--port',
-	# 	type=int,
-	# 	default=5000,
-	# 	help='Port of serving api')
-	# args = parser.parse_args()
 	app.run(host='0.0.0.0', port=5000)
