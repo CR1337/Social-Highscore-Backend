@@ -74,8 +74,6 @@ def analyze():
 	return resp_obj, return_code
 
 def analyzeWrapper(req, trx_id = 0):
-	resp_obj = jsonify({'success': False})
-
 	instances = []
 	if "img" in list(req.keys()):
 		raw_content = req["img"] #list
@@ -109,7 +107,7 @@ def analyzeWrapper(req, trx_id = 0):
 			any_success = True
 		except Exception as err:
 			print("Exception: ", str(err))
-			resp_part = jsonify({'error': str(err)})
+			resp_part = {'error': str(err)}
 		finally:
 			resp_obj[f"instance_{idx}"] = resp_part
 	return resp_obj, (200 if any_success else 205)
