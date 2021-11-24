@@ -89,7 +89,7 @@ def analyzeWrapper(req, trx_id = 0):
 			im = im.rotate(req['angle'])
 
 			in_mem_file = BytesIO()
-			im.save(in_mem_file, format = "JPG")
+			im.save(in_mem_file, format = "JPEG")
 			# reset file pointer to start
 			in_mem_file.seek(0)
 			img_bytes = in_mem_file.read()
