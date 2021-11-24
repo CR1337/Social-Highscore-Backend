@@ -14,7 +14,10 @@ import argparse
 import uuid
 import json
 import time
+import base64
+from io import BytesIO
 from tqdm import tqdm
+from PIL import Image
 
 #------------------------------
 
@@ -56,6 +59,8 @@ def analyze():
 	req = request.get_json()
 	trx_id = uuid.uuid4()
 
+
+
 	#---------------------------
 
 	if tf_version == 1:
@@ -78,8 +83,21 @@ def analyzeWrapper(req, trx_id = 0):
 	if "img" in list(req.keys()):
 		raw_content = req["img"] #list
 
+		# TODO: This needs a very good comment
 		for item in raw_content: #item is in type of dict
-			instances.append(item)
+			im = Image.open(BytesIO(base64.b64decode(item.split(",")[1])))
+			im = im.rotate(req['angle'])
+
+			in_mem_file = BytesIO()
+			im.save(in_mem_file, format = "JPG")
+			# reset file pointer to start
+			in_mem_file.seek(0)
+			img_bytes = in_mem_file.read()
+
+			base64_encoded_result_bytes = base64.b64encode(img_bytes)
+			base64_encoded_result_str = base64_encoded_result_bytes.decode('ascii')
+
+			instances.append(",".join([item.split(",")[0], base64_encoded_result_str]))
 
 	if len(instances) == 0:
 		return jsonify({'success': False, 'error': 'you must pass at least one img object in your request'}), 205
