@@ -112,14 +112,14 @@ def analyzeWrapper(req, trx_id = 0):
 
 	actions= ['emotion', 'age', 'gender', 'race']
 
-	if "actions" in list(req.keys()):
+	if "actions" in req:
 		actions = req["actions"]
 
 
 	#---------------------------
 	resp_obj = {}
 	try:
-		resp_obj = DeepFace.analyze(instance, actions=actions)
+		resp_obj = DeepFace.analyze(raw_content, actions=actions)
 		return resp_obj, 200
 	except Exception as err:
 		print("Exception: ", str(err))
@@ -164,7 +164,6 @@ def verifyWrapper(req, trx_id = 0):
 
 	#----------------------
 
-	# instances = []
 	if "img" in list(req.keys()):
 		raw_content = req["img"] #list
 
