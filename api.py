@@ -44,6 +44,20 @@ if tf_version == 1:
 	graph = tf.get_default_graph()
 
 #------------------------------
+
+def rotate_image(image, angle):
+	im = Image.open(BytesIO(base64.b64decode(image.split(",")[1])))
+	im = im.rotate(angle)
+	in_mem_file = BytesIO()
+	im.save(in_mem_file, format="JPEG")
+	# reset file pointer to start
+	in_mem_file.seek(0)
+	img_bytes = in_mem_file.read()
+	base64_encoded_result_bytes = base64.b64encode(img_bytes)
+	base64_encoded_result_str = base64_encoded_result_bytes.decode('ascii')
+	return ",".join([image.split(",")[0], base64_encoded_result_str])
+
+
 #Service API Interface
 
 @app.route('/')
@@ -79,30 +93,18 @@ def analyze():
 	return resp_obj, return_code
 
 def analyzeWrapper(req, trx_id = 0):
-	instances = []
 	if "img" in list(req.keys()):
 		raw_content = req["img"] #list
 
 		# TODO: This needs a very good comment
-		for item in raw_content: #item is in type of dict
-			im = Image.open(BytesIO(base64.b64decode(item.split(",")[1])))
-			im = im.rotate(req['angle'])
+		angle = 0 if 'angle' not in req else req['angle']
+		raw_content = rotate_image(raw_content, angle)
 
-			in_mem_file = BytesIO()
-			im.save(in_mem_file, format = "JPEG")
-			# reset file pointer to start
-			in_mem_file.seek(0)
-			img_bytes = in_mem_file.read()
 
-			base64_encoded_result_bytes = base64.b64encode(img_bytes)
-			base64_encoded_result_str = base64_encoded_result_bytes.decode('ascii')
+	else:
+		return jsonify({'success': False, 'error': 'you must pass an img object in your request'}), 205
 
-			instances.append(",".join([item.split(",")[0], base64_encoded_result_str]))
-
-	if len(instances) == 0:
-		return jsonify({'success': False, 'error': 'you must pass at least one img object in your request'}), 205
-
-	print("Analyzing ", len(instances)," instances")
+	print("Analyzing instance")
 
 	#---------------------------
 
@@ -113,34 +115,17 @@ def analyzeWrapper(req, trx_id = 0):
 	if "actions" in list(req.keys()):
 		actions = req["actions"]
 
-	if "detector_backend" in list(req.keys()):
-		detector_backend = req["detector_backend"]
 
 	#---------------------------
 	resp_obj = {}
-	any_success = False
-	for idx, instance in enumerate(instances):
-		try:
-			resp_part = DeepFace.analyze(instance, actions = actions)
-			any_success = True
-		except Exception as err:
-			print("Exception: ", str(err))
-			resp_part = {'error': str(err)}
-		finally:
-			resp_obj[f"instance_{idx}"] = resp_part
-	return resp_obj, (200 if any_success else 205)
-		
+	try:
+		resp_obj = DeepFace.analyze(instance, actions=actions)
+		return resp_obj, 200
+	except Exception as err:
+		print("Exception: ", str(err))
+		resp_obj = {'error': str(err)}
+		return resp_obj, 205
 
-
-	# try:
-	# 	resp_obj = DeepFace.analyze(instances, actions = actions)
-	# except Exception as err:
-	# 	print("Exception: ", str(err))
-	# 	return jsonify({'success': False, 'error': str(err)}), 205
-
-	# #---------------
-	# #print(resp_obj)
-	# return resp_obj, 200
 
 @app.route('/verify', methods=['POST'])
 def verify():
@@ -172,143 +157,58 @@ def verifyWrapper(req, trx_id = 0):
 
 	resp_obj = jsonify({'success': False})
 
-	model_name = "VGG-Face"; distance_metric = "cosine"; detector_backend = "opencv"
-	if "model_name" in list(req.keys()):
-		model_name = req["model_name"]
-	if "distance_metric" in list(req.keys()):
-		distance_metric = req["distance_metric"]
-	if "detector_backend" in list(req.keys()):
-		detector_backend = req["detector_backend"]
+	model_name = "VGG-Face"
+	distance_metric = "cosine"
+	detector_backend = "opencv"
+
 
 	#----------------------
 
-	instances = []
+	# instances = []
 	if "img" in list(req.keys()):
 		raw_content = req["img"] #list
 
-		for item in raw_content: #item is in type of dict
-			instance = []
-			img1 = item["img1"]; img2 = item["img2"]
+		instance = []
+		img1 = raw_content["img1"]; img2 = raw_content["img2"]
 
-			validate_img1 = False
-			if len(img1) > 11 and img1[0:11] == "data:image/":
-				validate_img1 = True
+		angle = 0 if 'angle' not in req else req['angle']
+		img1 = rotate_image(img1, angle)
+		img2 = rotate_image(img2, angle)
 
-			validate_img2 = False
-			if len(img2) > 11 and img2[0:11] == "data:image/":
-				validate_img2 = True
 
-			if validate_img1 != True or validate_img2 != True:
-				return jsonify({'success': False, 'error': 'you must pass both img1 and img2 as base64 encoded string'}), 205
+		validate_img1 = False
+		if len(img1) > 11 and img1[0:11] == "data:image/":
+			validate_img1 = True
 
-			instance.append(img1); instance.append(img2)
-			instances.append(instance)
+		validate_img2 = False
+		if len(img2) > 11 and img2[0:11] == "data:image/":
+			validate_img2 = True
+
+		if validate_img1 != True or validate_img2 != True:
+			return jsonify({'success': False, 'error': 'you must pass both img1 and img2 as base64 encoded string'}), 205
+
+		instance.append(img1); instance.append(img2)
+
+	else:
+		return jsonify({'success': False, 'error': 'you must pass two img objects in your request'}), 205
 
 	#--------------------------
 
-	if len(instances) == 0:
-		return jsonify({'success': False, 'error': 'you must pass at least one img object in your request'}), 205
-
-	print("Input request of ", trx_id, " has ",len(instances)," pairs to verify")
-
+	print("Verifying instance")
 	#--------------------------
 
 	try:
-		resp_obj = DeepFace.verify(instances
+		resp_obj = DeepFace.verify(instance
 			, model_name = model_name
 			, distance_metric = distance_metric
 			, detector_backend = detector_backend
-		), 200
-
-		if model_name == "Ensemble": #issue 198.
-			for key in resp_obj: #issue 198.
-				resp_obj[key]['verified'] = bool(resp_obj[key]['verified'])
+		)
 
 	except Exception as err:
 		resp_obj = jsonify({'success': False, 'error': str(err)}), 205
 
-	return resp_obj
+	return resp_obj, 200
 
-# @app.route('/represent', methods=['POST'])
-# def represent():
-
-# 	global graph
-
-# 	tic = time.time()
-# 	req = request.get_json()
-# 	trx_id = uuid.uuid4()
-
-# 	resp_obj = jsonify({'success': False})
-
-# 	if tf_version == 1:
-# 		with graph.as_default():
-# 			resp_obj = representWrapper(req, trx_id)
-# 	elif tf_version == 2:
-# 		resp_obj = representWrapper(req, trx_id)
-
-# 	#--------------------------
-
-# 	toc =  time.time()
-
-# 	resp_obj["trx_id"] = trx_id
-# 	resp_obj["seconds"] = toc-tic
-
-# 	return resp_obj, 200
-
-# def representWrapper(req, trx_id = 0):
-
-# 	resp_obj = jsonify({'success': False})
-
-# 	#-------------------------------------
-# 	#find out model
-
-# 	model_name = "VGG-Face"; distance_metric = "cosine"; detector_backend = 'opencv'
-
-# 	if "model_name" in list(req.keys()):
-# 		model_name = req["model_name"]
-
-# 	if "detector_backend" in list(req.keys()):
-# 		detector_backend = req["detector_backend"]
-
-# 	#-------------------------------------
-# 	#retrieve images from request
-
-# 	img = ""
-# 	if "img" in list(req.keys()):
-# 		img = req["img"] #list
-# 		#print("img: ", img)
-
-# 	validate_img = False
-# 	if len(img) > 11 and img[0:11] == "data:image/":
-# 		validate_img = True
-
-# 	if validate_img != True:
-# 		print("invalid image passed!")
-# 		return jsonify({'success': False, 'error': 'you must pass img as base64 encoded string'}), 205
-
-# 	#-------------------------------------
-# 	#call represent function from the interface
-
-# 	try:
-
-# 		embedding = DeepFace.represent(img
-# 			, model_name = model_name
-# 			, detector_backend = detector_backend
-# 		)
-
-# 	except Exception as err:
-# 		print("Exception: ",str(err))
-# 		resp_obj = jsonify({'success': False, 'error': str(err)}), 205
-
-# 	#-------------------------------------
-
-# 	#print("embedding is ", len(embedding)," dimensional vector")
-# 	resp_obj = {}
-# 	resp_obj["embedding"] = embedding
-
-# 	#-------------------------------------
-
-# 	return resp_obj
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', port=5000)
