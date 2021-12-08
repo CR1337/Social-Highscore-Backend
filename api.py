@@ -70,7 +70,8 @@ def analyze():
 	global graph
 
 	tic = time.time()
-	req = request.get_json()
+	# req = request.get_json()
+	req = json.loads(request.data.decode(encoding='utf-8'))
 	trx_id = uuid.uuid4()
 
 
