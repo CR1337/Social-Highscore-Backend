@@ -36,11 +36,6 @@ def with_deepface(func):
     return wrapper
 
 
-# @with_deepface
-# def detect_face(image):
-#     return DeepFace.detectFace(image)
-
-
 @with_deepface
 def analyze_face(image, actions):
     return DeepFace.analyze(image, actions)
@@ -63,18 +58,6 @@ def rotate_image(image, angle):
     base64_encoded_result_bytes = base64.b64encode(img_bytes)
     base64_encoded_result_str = base64_encoded_result_bytes.decode('ascii')
     return ",".join([image.split(",")[0], base64_encoded_result_str])
-
-
-# def determine_rotation_angle(image):
-#     for angle in [0, 90, 180, 270]:
-#         rotated_image = rotate_image(image, angle)
-#         try:
-#             detect_face(rotated_image)
-#         except ValueError:
-#             pass
-#         else:
-#             return {'angle': angle}
-#     raise ValueError()
 
 
 def api_route(func):
@@ -106,7 +89,7 @@ def index():
 @app.route('/analyze', methods=['POST'], endpoint='analyze')
 @api_route
 def analyze(request_data):
-    print("Analyzing...")
+    print(f"Analyzing... (job_id: {request_data['job_id']})")
     angle = request_data.get('angle', 0)
 
     if 'img' not in request_data:
@@ -128,7 +111,7 @@ def analyze(request_data):
 @app.route('/verify', methods=['POST'], endpoint='verify')
 @api_route
 def verify(request_data):
-    print("Verifying...")
+    print(f"Verifying... (job_id: {request_data['job_id']})")
     angle = request_data.get('angle', 0)
 
     images = [None, None]
@@ -143,21 +126,6 @@ def verify(request_data):
         return {'error': 'no face'}, BAD_REQUEST_400
     else:
         return result, OK_200
-
-
-# @app.route('/determine-angle', methods=['POST'], endpoint='determine_angle')
-# @api_route
-# def determine_angle(request_data):
-#     if 'img' not in request_data:
-#         return {'error': "no img"}, BAD_REQUEST_400
-#     image = request_data['img']
-
-#     try:
-#         result = determine_rotation_angle(image)
-#     except ValueError:
-#         return {'error': 'no face'}, BAD_REQUEST_400
-#     else:
-#         return result, OK_200
 
 
 if __name__ == '__main__':
