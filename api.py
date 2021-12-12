@@ -67,7 +67,7 @@ def rotate_image(image, angle):
 
 def determine_rotation_angle(image):
     for angle in [0, 90, 180, 270]:
-        rotated_image = rotate_image(image, angle) if angle > 0 else image
+        rotated_image = rotate_image(image, angle)
         try:
             detect_face(rotated_image)
         except ValueError:
@@ -81,17 +81,17 @@ def api_route(func):
     def wrapper():
         request_data = json.loads(request.data.decode(encoding='utf-8'))
 
-        if 'handle' not in request_data:
+        if 'job_id' not in request_data:
             return (
-                jsonify({'success': False, 'error': "no handle"}),
+                jsonify({'success': False, 'error': "no job_id"}),
                 BAD_REQUEST_400
             )
         else:
-            handle = request_data['handle']
+            job_id = request_data['job_id']
 
         result, code = func(request_data)
 
-        result['handle'] = handle
+        result['job_id'] = job_id
         result['success'] = (code == OK_200)
 
         return jsonify(result), code
