@@ -1,5 +1,0 @@
-flask
-tqdm
-tensorflow
-deepface
-pillow

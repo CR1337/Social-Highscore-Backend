@@ -1,0 +1,17 @@
+version: '3'
+services:
+  nginx:
+    build: ./nginx/
+    container_name: face_api_nginx 
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - flaskapp:face_api_flask
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+  flaskapp:
+    build: ./flaskapp/
+    container_name: face_api_flask
+    expose:
+      - "8080"
