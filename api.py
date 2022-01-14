@@ -28,7 +28,6 @@ BAD_REQUEST_400 = 400
 
 def with_deepface(func):
     def wrapper(*args, **kwargs):
-        gc.collect()
         global graph
         if tf_version == 1:
             with graph.as_default():
