@@ -25,17 +25,6 @@ OK_200 = 200
 BAD_REQUEST_400 = 400
 
 
-# def with_deepface_old(func):
-#     def wrapper(*args, **kwargs):
-#         if tf_version == 1:
-#             global graph
-#             with graph.as_default():
-#                 return func(*args, **kwargs)
-#         else:
-#             return func(*args, **kwargs)
-#     return wrapper
-
-
 def with_deepface(func):
     def wrapper_tf_1(*args, **kwargs):
         global graph
