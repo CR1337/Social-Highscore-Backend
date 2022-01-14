@@ -90,8 +90,8 @@ def index():
 @app.route('/analyze', methods=['POST'], endpoint='analyze')
 @api_route
 def analyze(request_data):
-    print(f"Analyzing... (job_id: {request_data['job_id']})")
     angle = request_data.get('angle', 0)
+    print(f"Analyzing... (job_id: {request_data['job_id']}, angle: {angle})")
 
     if 'img' not in request_data:
         return {'error': "no img"}, BAD_REQUEST_400
@@ -112,8 +112,8 @@ def analyze(request_data):
 @app.route('/verify', methods=['POST'], endpoint='verify')
 @api_route
 def verify(request_data):
-    print(f"Verifying... (job_id: {request_data['job_id']})")
     angle = request_data.get('angle', 0)
+    print(f"Verifying... (job_id: {request_data['job_id']}, angle: {angle})")
 
     images = [None, None]
     for i, key in enumerate(['img0', 'img1']):
