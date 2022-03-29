@@ -1,0 +1,5 @@
+flask==2.0.2
+tqdm==4.62.3
+tensorflow==2.7.0
+deepface==0.0.72
+pillow==9.0.0
